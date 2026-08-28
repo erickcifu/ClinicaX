@@ -1,7 +1,9 @@
 import { useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
+import EditClinicDialog from "../components/EditClinicDialog.jsx";
 
+import ClinicStatusDialog from "../components/ClinicStatusDialog.jsx";
 import {
   Alert,
   Box,
@@ -20,7 +22,11 @@ import CreateClinicDialog from "../components/CreateClinicDialog.jsx";
 
 export default function ClinicsPage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingClinic, setEditingClinic] =
+    useState(null);
 
+  const [statusClinic, setStatusClinic] =
+    useState(null);
   const {
     data: clinics = [],
     isPending,
@@ -112,14 +118,28 @@ export default function ClinicsPage() {
             <ClinicCard
               key={clinic.id_clinica}
               clinic={clinic}
-            />
+              onEdit={setEditingClinic}
+              onChangeStatus={setStatusClinic}
+            />            
           ))}
+          
         </Box>
       )}
 
       <CreateClinicDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
+      />
+      <EditClinicDialog
+        open={Boolean(editingClinic)}
+        clinic={editingClinic}
+        onClose={() => setEditingClinic(null)}
+      />
+
+      <ClinicStatusDialog
+        open={Boolean(statusClinic)}
+        clinic={statusClinic}
+        onClose={() => setStatusClinic(null)}
       />
     </Box>
   );

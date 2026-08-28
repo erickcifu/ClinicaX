@@ -11,3 +11,23 @@ export async function createClinic(data) {
 
   return response.data.data;
 }
+
+export async function updateClinic(id, data) {
+  const response = await http.patch(
+    `/api/v1/clinics/${id}`,
+    data
+  );
+
+  return response.data.data;
+}
+
+export async function updateClinicStatus(id, estado) {
+  const response = await http.patch(
+    `/api/v1/clinics/${id}/status`,
+    {
+      estado,
+    }
+  );
+
+  return response.data.data;
+}

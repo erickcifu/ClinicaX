@@ -1,5 +1,7 @@
 import {
+  Button,
   Card,
+  CardActions,
   CardContent,
   Chip,
   Divider,
@@ -7,7 +9,14 @@ import {
   Typography,
 } from "@mui/material";
 
-export default function ClinicCard({ clinic }) {
+import EditIcon from "@mui/icons-material/Edit";
+import SyncAltIcon from "@mui/icons-material/SyncAlt";
+
+export default function ClinicCard({
+  clinic,
+  onEdit,
+  onChangeStatus,
+}) {
   const statusColor = {
     ACTIVA: "success",
     INACTIVA: "default",
@@ -32,13 +41,17 @@ export default function ClinicCard({ clinic }) {
               variant="body2"
               color="text.secondary"
             >
-              {clinic.direccion || "Sin dirección registrada"}
+              {clinic.direccion ||
+                "Sin dirección registrada"}
             </Typography>
           </div>
 
           <Chip
             label={clinic.estado}
-            color={statusColor[clinic.estado] || "default"}
+            color={
+              statusColor[clinic.estado] ||
+              "default"
+            }
             size="small"
           />
         </Stack>
@@ -62,6 +75,34 @@ export default function ClinicCard({ clinic }) {
           </Typography>
         </Stack>
       </CardContent>
+
+      <Divider />
+
+      <CardActions
+        sx={{
+          px: 2,
+          py: 1.5,
+          justifyContent: "flex-end",
+        }}
+      >
+        <Button
+          size="small"
+          startIcon={<EditIcon />}
+          onClick={() => onEdit(clinic)}
+        >
+          Editar
+        </Button>
+
+        <Button
+          size="small"
+          startIcon={<SyncAltIcon />}
+          onClick={() =>
+            onChangeStatus(clinic)
+          }
+        >
+          Estado
+        </Button>
+      </CardActions>
     </Card>
   );
 }

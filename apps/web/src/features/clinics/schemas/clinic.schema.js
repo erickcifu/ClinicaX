@@ -49,3 +49,21 @@ export const createClinicSchema = z.object({
     ])
     .optional(),
 });
+export const updateClinicSchema = createClinicSchema
+  .partial()
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    {
+      message: "Debe modificar al menos un campo",
+    }
+  );
+
+export const updateClinicStatusSchema = z.object({
+  estado: z.enum(
+    ["ACTIVA", "INACTIVA", "SUSPENDIDA"],
+    {
+      message:
+        "El estado debe ser ACTIVA, INACTIVA o SUSPENDIDA",
+    }
+  ),
+});
