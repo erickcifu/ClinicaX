@@ -1,0 +1,639 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model auditoria {
+  id_auditoria BigInt    @id @default(autoincrement())
+  id_clinica   BigInt
+  id_usuario   BigInt?
+  accion       String    @db.VarChar(50)
+  entidad      String    @db.VarChar(80)
+  id_entidad   String?   @db.VarChar(100)
+  detalles     Json      @default("{}")
+  ip_origen    String?   @db.Inet
+  fecha        DateTime  @default(now()) @db.Timestamptz(6)
+  clinicas     clinicas  @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_auditoria_clinica")
+  usuarios     usuarios? @relation(fields: [id_clinica, id_usuario], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_auditoria_usuario")
+
+  @@index([id_clinica, fecha(sort: Desc)], map: "ix_auditoria_clinica_fecha")
+  @@index([entidad, id_entidad], map: "ix_auditoria_entidad")
+}
+
+model categorias_producto {
+  id_categoria BigInt      @id @default(autoincrement())
+  id_clinica   BigInt
+  nombre       String      @db.VarChar(120)
+  descripcion  String?
+  activo       Boolean     @default(true)
+  clinicas     clinicas    @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_categorias_clinica")
+  productos    productos[]
+
+  @@unique([id_clinica, id_categoria], map: "uq_categorias_clinica_categoria")
+  @@unique([id_clinica, nombre], map: "uq_categorias_clinica_nombre")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model citas {
+  id_cita                                           BigInt     @id @default(autoincrement())
+  id_clinica                                        BigInt
+  id_paciente                                       BigInt
+  id_odontologo                                     BigInt
+  id_creado_por                                     BigInt?
+  fecha_hora_inicio                                 DateTime   @db.Timestamptz(6)
+  fecha_hora_fin                                    DateTime   @db.Timestamptz(6)
+  motivo                                            String?
+  estado                                            String     @default("PROGRAMADA") @db.VarChar(25)
+  notas                                             String?
+  fecha_creacion                                    DateTime   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion                               DateTime   @default(now()) @db.Timestamptz(6)
+  usuarios_citas_id_clinica_id_creado_porTousuarios usuarios?  @relation("citas_id_clinica_id_creado_porTousuarios", fields: [id_clinica, id_creado_por], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_citas_creado_por")
+  usuarios_citas_id_clinica_id_odontologoTousuarios usuarios   @relation("citas_id_clinica_id_odontologoTousuarios", fields: [id_clinica, id_odontologo], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_citas_odontologo")
+  pacientes                                         pacientes  @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_citas_paciente")
+  consultas                                         consultas?
+
+  @@unique([id_clinica, id_cita], map: "uq_citas_clinica_cita")
+  @@index([id_clinica, fecha_hora_inicio], map: "ix_citas_clinica_inicio")
+  @@index([id_odontologo, fecha_hora_inicio], map: "ix_citas_odontologo_inicio")
+  @@index([id_paciente, fecha_hora_inicio], map: "ix_citas_paciente_inicio")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model clinicas {
+  id_clinica            BigInt                 @id @default(autoincrement())
+  nombre                String                 @db.VarChar(150)
+  nit                   String?                @db.VarChar(30)
+  direccion             String?
+  telefono              String?                @db.VarChar(30)
+  correo                String?                @db.VarChar(150)
+  logo_url              String?
+  zona_horaria          String                 @default("America/Guatemala") @db.VarChar(50)
+  estado                String                 @default("ACTIVA") @db.VarChar(20)
+  fecha_creacion        DateTime               @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion   DateTime               @default(now()) @db.Timestamptz(6)
+  auditoria             auditoria[]
+  categorias_producto   categorias_producto[]
+  configuracion_clinica configuracion_clinica?
+  licencias             licencias[]
+  pacientes             pacientes[]
+  productos             productos[]
+  tratamientos          tratamientos[]
+  usuarios              usuarios[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model configuracion_clinica {
+  id_clinica              BigInt   @id
+  duracion_cita_minutos   Int      @default(30) @db.SmallInt
+  horas_recordatorio      Int      @default(24) @db.SmallInt
+  permite_portal_paciente Boolean  @default(true)
+  moneda                  String   @default("GTQ") @db.Char(3)
+  configuracion_extra     Json     @default("{}")
+  clinicas                clinicas @relation(fields: [id_clinica], references: [id_clinica], onDelete: Cascade, onUpdate: NoAction, map: "fk_configuracion_clinica")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model consentimientos_paciente {
+  id_consentimiento BigInt     @id @default(autoincrement())
+  id_clinica        BigInt
+  id_paciente       BigInt
+  id_consulta       BigInt?
+  id_registrado_por BigInt?
+  tipo              String     @db.VarChar(80)
+  version_documento String?    @db.VarChar(30)
+  texto_snapshot    String?
+  aceptado          Boolean    @default(false)
+  fecha_aceptacion  DateTime?  @db.Timestamptz(6)
+  firma_url         String?
+  ip_origen         String?    @db.Inet
+  user_agent        String?
+  fecha_creacion    DateTime   @default(now()) @db.Timestamptz(6)
+  consultas         consultas? @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_consentimiento_consulta")
+  pacientes         pacientes  @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_consentimiento_paciente")
+  usuarios          usuarios?  @relation(fields: [id_clinica, id_registrado_por], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_consentimiento_usuario")
+
+  @@index([id_paciente, fecha_creacion(sort: Desc)], map: "ix_consentimientos_paciente_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model consultas {
+  id_consulta              BigInt                     @id @default(autoincrement())
+  id_clinica               BigInt
+  id_paciente              BigInt
+  id_odontologo            BigInt
+  id_cita                  BigInt?                    @unique(map: "uq_consultas_cita")
+  fecha_hora_inicio        DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_hora_fin           DateTime?                  @db.Timestamptz(6)
+  motivo_consulta          String?
+  diagnostico              String?
+  observaciones            String?
+  estado                   String                     @default("ABIERTA") @db.VarChar(20)
+  fecha_creacion           DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion      DateTime                   @default(now()) @db.Timestamptz(6)
+  consentimientos_paciente consentimientos_paciente[]
+  citas                    citas?                     @relation(fields: [id_clinica, id_cita], references: [id_clinica, id_cita], onDelete: NoAction, onUpdate: NoAction, map: "fk_consultas_cita")
+  usuarios                 usuarios                   @relation(fields: [id_clinica, id_odontologo], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_consultas_odontologo")
+  pacientes                pacientes                  @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_consultas_paciente")
+  documentos               documentos[]
+  odontogramas             odontogramas[]
+  pagos                    pagos[]
+  recetas                  recetas[]
+  registros_tratamiento    registros_tratamiento[]
+  signos_vitales           signos_vitales[]
+
+  @@unique([id_clinica, id_consulta], map: "uq_consultas_clinica_consulta")
+  @@index([id_odontologo, fecha_hora_inicio(sort: Desc)], map: "ix_consultas_odontologo_fecha")
+  @@index([id_paciente, fecha_hora_inicio(sort: Desc)], map: "ix_consultas_paciente_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model dientes {
+  id_diente                Int                        @id @default(autoincrement()) @db.SmallInt
+  numero_fdi               Int                        @unique @db.SmallInt
+  nombre                   String                     @db.VarChar(120)
+  denticion                String                     @default("PERMANENTE") @db.VarChar(20)
+  activo                   Boolean                    @default(true)
+  odontograma_detalle      odontograma_detalle[]
+  plan_tratamiento_detalle plan_tratamiento_detalle[]
+  registros_tratamiento    registros_tratamiento[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model documentos {
+  id_documento   BigInt     @id @default(autoincrement())
+  id_clinica     BigInt
+  id_paciente    BigInt
+  id_consulta    BigInt?
+  id_subido_por  BigInt?
+  tipo           String     @db.VarChar(50)
+  nombre_archivo String     @db.VarChar(255)
+  storage_url    String
+  mime_type      String?    @db.VarChar(100)
+  tamano_bytes   BigInt?
+  hash_sha256    String?    @db.VarChar(64)
+  observaciones  String?
+  fecha          DateTime   @default(now()) @db.Timestamptz(6)
+  consultas      consultas? @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_documentos_consulta")
+  pacientes      pacientes  @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_documentos_paciente")
+  usuarios       usuarios?  @relation(fields: [id_clinica, id_subido_por], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_documentos_usuario")
+
+  @@index([id_paciente, fecha(sort: Desc)], map: "ix_documentos_paciente_fecha")
+}
+
+model enfermedades {
+  id_enfermedad         Int                     @id @default(autoincrement())
+  nombre                String                  @unique @db.VarChar(120)
+  descripcion           String?
+  activa                Boolean                 @default(true)
+  paciente_enfermedades paciente_enfermedades[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model historial_medico {
+  id_historial_medico                BigInt    @id @default(autoincrement())
+  id_paciente                        BigInt    @unique
+  motivo_consulta                    String?
+  hospitalizado_ultimos_2_anios      Boolean   @default(false)
+  detalle_hospitalizacion            String?
+  tratamiento_medico_ultimos_2_anios Boolean   @default(false)
+  detalle_tratamiento_medico         String?
+  alergia_medicamentos               Boolean   @default(false)
+  detalle_alergias                   String?
+  hemorragias                        Boolean   @default(false)
+  detalle_hemorragias                String?
+  medicacion_actual                  Boolean   @default(false)
+  detalle_medicacion_actual          String?
+  embarazo                           Boolean   @default(false)
+  semanas_embarazo                   Int?      @db.SmallInt
+  consume_drogas                     Boolean   @default(false)
+  detalle_drogas                     String?
+  medico_cabecera                    String?   @db.VarChar(150)
+  telefono_medico                    String?   @db.VarChar(30)
+  observaciones                      String?
+  fecha_registro                     DateTime  @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion                DateTime  @default(now()) @db.Timestamptz(6)
+  pacientes                          pacientes @relation(fields: [id_paciente], references: [id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_historial_medico_paciente")
+}
+
+model historial_odontologico {
+  id_historial_odontologico     BigInt    @id @default(autoincrement())
+  id_paciente                   BigInt    @unique
+  ulceras_bucales               Boolean   @default(false)
+  dolor_dentario                Boolean   @default(false)
+  gingivorragia                 Boolean   @default(false)
+  infecciones_orales            Boolean   @default(false)
+  reaccion_anestesia            Boolean   @default(false)
+  detalle_reaccion_anestesia    String?
+  habitos                       String?
+  motivo_ultima_consulta_dental String?
+  historia_tratamientos_previos String?
+  observaciones                 String?
+  fecha_registro                DateTime  @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion           DateTime  @default(now()) @db.Timestamptz(6)
+  pacientes                     pacientes @relation(fields: [id_paciente], references: [id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_historial_odontologico_paciente")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model licencias {
+  id_licencia          BigInt    @id @default(autoincrement())
+  id_clinica           BigInt
+  plan                 String    @db.VarChar(50)
+  estado               String    @default("PRUEBA") @db.VarChar(20)
+  fecha_inicio         DateTime  @db.Date
+  fecha_fin            DateTime  @db.Date
+  periodo_gracia_hasta DateTime? @db.Date
+  ultima_validacion    DateTime? @db.Timestamptz(6)
+  referencia_pago      String?   @db.VarChar(150)
+  fecha_creacion       DateTime  @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion  DateTime  @default(now()) @db.Timestamptz(6)
+  clinicas             clinicas  @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_licencias_clinica")
+
+  @@index([id_clinica, estado], map: "ix_licencias_clinica_estado")
+  @@index([fecha_fin], map: "ix_licencias_fecha_fin")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model movimientos_inventario {
+  id_movimiento  BigInt    @id @default(autoincrement())
+  id_clinica     BigInt
+  id_producto    BigInt
+  id_usuario     BigInt?
+  tipo           String    @db.VarChar(25)
+  cantidad       Decimal   @db.Decimal(12, 3)
+  costo_unitario Decimal?  @db.Decimal(12, 2)
+  fecha          DateTime  @default(now()) @db.Timestamptz(6)
+  motivo         String?   @db.VarChar(200)
+  referencia     String?   @db.VarChar(150)
+  observaciones  String?
+  productos      productos @relation(fields: [id_clinica, id_producto], references: [id_clinica, id_producto], onDelete: NoAction, onUpdate: NoAction, map: "fk_movimientos_producto")
+  usuarios       usuarios? @relation(fields: [id_clinica, id_usuario], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_movimientos_usuario")
+
+  @@index([id_producto, fecha(sort: Desc)], map: "ix_movimientos_producto_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model odontograma_detalle {
+  id_odontograma_detalle BigInt       @id @default(autoincrement())
+  id_clinica             BigInt
+  id_odontograma         BigInt
+  id_diente              Int          @db.SmallInt
+  superficie             String       @default("COMPLETO") @db.VarChar(20)
+  estado                 String       @db.VarChar(30)
+  observaciones          String?
+  dientes                dientes      @relation(fields: [id_diente], references: [id_diente], onDelete: NoAction, onUpdate: NoAction, map: "fk_od_detalle_diente")
+  odontogramas           odontogramas @relation(fields: [id_clinica, id_odontograma], references: [id_clinica, id_odontograma], onDelete: Cascade, onUpdate: NoAction, map: "fk_od_detalle_odontograma")
+
+  @@unique([id_odontograma, id_diente, superficie], map: "uq_od_detalle_diente_superficie")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model odontogramas {
+  id_odontograma      BigInt                @id @default(autoincrement())
+  id_clinica          BigInt
+  id_paciente         BigInt
+  id_consulta         BigInt?
+  id_odontologo       BigInt
+  tipo                String                @default("EVOLUCION") @db.VarChar(20)
+  fecha               DateTime              @default(now()) @db.Timestamptz(6)
+  observaciones       String?
+  odontograma_detalle odontograma_detalle[]
+  consultas           consultas?            @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_odontogramas_consulta")
+  usuarios            usuarios              @relation(fields: [id_clinica, id_odontologo], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_odontogramas_odontologo")
+  pacientes           pacientes             @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_odontogramas_paciente")
+
+  @@unique([id_clinica, id_odontograma], map: "uq_odontogramas_clinica_odontograma")
+  @@index([id_paciente, fecha(sort: Desc)], map: "ix_odontogramas_paciente_fecha")
+}
+
+model paciente_cuentas_usuario {
+  id_clinica        BigInt
+  id_paciente       BigInt
+  id_usuario        BigInt
+  fecha_vinculacion DateTime  @default(now()) @db.Timestamptz(6)
+  pacientes         pacientes @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: Cascade, onUpdate: NoAction, map: "fk_pcu_paciente")
+  usuarios          usuarios  @relation(fields: [id_clinica, id_usuario], references: [id_clinica, id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_pcu_usuario")
+
+  @@id([id_paciente, id_usuario])
+  @@unique([id_clinica, id_paciente], map: "uq_pcu_paciente")
+  @@unique([id_clinica, id_usuario], map: "uq_pcu_usuario")
+}
+
+model paciente_enfermedades {
+  id_paciente_enfermedad BigInt       @id @default(autoincrement())
+  id_paciente            BigInt
+  id_enfermedad          Int
+  tratamiento            String?
+  observaciones          String?
+  fecha_diagnostico      DateTime?    @db.Date
+  activa                 Boolean      @default(true)
+  fecha_registro         DateTime     @default(now()) @db.Timestamptz(6)
+  enfermedades           enfermedades @relation(fields: [id_enfermedad], references: [id_enfermedad], onDelete: NoAction, onUpdate: NoAction, map: "fk_pe_enfermedad")
+  pacientes              pacientes    @relation(fields: [id_paciente], references: [id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_pe_paciente")
+
+  @@unique([id_paciente, id_enfermedad], map: "uq_paciente_enfermedad_activa", where: raw("(activa = true)"))
+}
+
+model pacientes {
+  id_paciente              BigInt                     @id @default(autoincrement())
+  id_clinica               BigInt
+  codigo_expediente        String                     @db.VarChar(30)
+  nombres                  String                     @db.VarChar(100)
+  apellidos                String                     @db.VarChar(100)
+  dpi                      String?                    @db.VarChar(25)
+  fecha_nacimiento         DateTime?                  @db.Date
+  sexo                     String?                    @db.VarChar(30)
+  telefono                 String?                    @db.VarChar(30)
+  correo                   String?                    @db.VarChar(150)
+  direccion                String?
+  ocupacion                String?                    @db.VarChar(120)
+  contacto_emergencia      String?                    @db.VarChar(150)
+  telefono_emergencia      String?                    @db.VarChar(30)
+  observaciones            String?
+  activo                   Boolean                    @default(true)
+  fecha_registro           DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion      DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_eliminacion        DateTime?                  @db.Timestamptz(6)
+  citas                    citas[]
+  consentimientos_paciente consentimientos_paciente[]
+  consultas                consultas[]
+  documentos               documentos[]
+  historial_medico         historial_medico?
+  historial_odontologico   historial_odontologico?
+  odontogramas             odontogramas[]
+  paciente_cuentas_usuario paciente_cuentas_usuario?
+  paciente_enfermedades    paciente_enfermedades[]
+  clinicas                 clinicas                   @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_pacientes_clinica")
+  pagos                    pagos[]
+  planes_tratamiento       planes_tratamiento[]
+  recetas                  recetas[]
+  signos_vitales           signos_vitales[]
+
+  @@unique([id_clinica, codigo_expediente], map: "uq_pacientes_clinica_expediente")
+  @@unique([id_clinica, id_paciente], map: "uq_pacientes_clinica_paciente")
+  @@unique([id_clinica, dpi], map: "uq_pacientes_dpi_clinica", where: raw("((dpi IS NOT NULL) AND (fecha_eliminacion IS NULL))"))
+  @@index([id_clinica, apellidos, nombres], map: "ix_pacientes_clinica_nombre")
+  @@index([id_clinica, telefono], map: "ix_pacientes_telefono")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pagos {
+  id_pago            BigInt              @id @default(autoincrement())
+  id_clinica         BigInt
+  id_paciente        BigInt
+  id_plan            BigInt?
+  id_consulta        BigInt?
+  id_registrado_por  BigInt?
+  monto              Decimal             @db.Decimal(12, 2)
+  moneda             String              @default("GTQ") @db.Char(3)
+  metodo_pago        String              @db.VarChar(30)
+  referencia         String?             @db.VarChar(150)
+  estado             String              @default("APLICADO") @db.VarChar(20)
+  fecha              DateTime            @default(now()) @db.Timestamptz(6)
+  observaciones      String?
+  consultas          consultas?          @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_pagos_consulta")
+  pacientes          pacientes           @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_pagos_paciente")
+  planes_tratamiento planes_tratamiento? @relation(fields: [id_clinica, id_plan], references: [id_clinica, id_plan], onDelete: NoAction, onUpdate: NoAction, map: "fk_pagos_plan")
+  usuarios           usuarios?           @relation(fields: [id_clinica, id_registrado_por], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_pagos_usuario")
+
+  @@index([id_paciente, fecha(sort: Desc)], map: "ix_pagos_paciente_fecha")
+  @@index([id_plan], map: "ix_pagos_plan")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model plan_tratamiento_detalle {
+  id_plan_detalle           BigInt                  @id @default(autoincrement())
+  id_clinica                BigInt
+  id_plan                   BigInt
+  id_tratamiento            BigInt
+  id_diente                 Int?                    @db.SmallInt
+  descripcion_personalizada String?
+  precio_cotizado           Decimal                 @default(0) @db.Decimal(12, 2)
+  estado                    String                  @default("PENDIENTE") @db.VarChar(20)
+  orden                     Int?                    @db.SmallInt
+  observaciones             String?
+  dientes                   dientes?                @relation(fields: [id_diente], references: [id_diente], onDelete: NoAction, onUpdate: NoAction, map: "fk_plan_detalle_diente")
+  planes_tratamiento        planes_tratamiento      @relation(fields: [id_clinica, id_plan], references: [id_clinica, id_plan], onDelete: NoAction, onUpdate: NoAction, map: "fk_plan_detalle_plan")
+  tratamientos              tratamientos            @relation(fields: [id_clinica, id_tratamiento], references: [id_clinica, id_tratamiento], onDelete: NoAction, onUpdate: NoAction, map: "fk_plan_detalle_tratamiento")
+  registros_tratamiento     registros_tratamiento[]
+
+  @@unique([id_clinica, id_plan_detalle], map: "uq_plan_detalle_clinica_detalle")
+  @@index([id_plan], map: "ix_plan_detalle_plan")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model planes_tratamiento {
+  id_plan                  BigInt                     @id @default(autoincrement())
+  id_clinica               BigInt
+  id_paciente              BigInt
+  id_odontologo            BigInt
+  estado                   String                     @default("BORRADOR") @db.VarChar(20)
+  fecha_plan               DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  observaciones            String?
+  fecha_creacion           DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion      DateTime                   @default(now()) @db.Timestamptz(6)
+  pagos                    pagos[]
+  plan_tratamiento_detalle plan_tratamiento_detalle[]
+  usuarios                 usuarios                   @relation(fields: [id_clinica, id_odontologo], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_planes_odontologo")
+  pacientes                pacientes                  @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_planes_paciente")
+
+  @@unique([id_clinica, id_plan], map: "uq_planes_clinica_plan")
+  @@index([id_paciente, fecha_plan(sort: Desc)], map: "ix_planes_paciente_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model productos {
+  id_producto            BigInt                   @id @default(autoincrement())
+  id_clinica             BigInt
+  id_categoria           BigInt?
+  codigo                 String?                  @db.VarChar(50)
+  nombre                 String                   @db.VarChar(200)
+  descripcion            String?
+  unidad_medida          String                   @default("UNIDAD") @db.VarChar(50)
+  stock_actual           Decimal                  @default(0) @db.Decimal(12, 3)
+  stock_minimo           Decimal                  @default(0) @db.Decimal(12, 3)
+  precio_compra          Decimal?                 @db.Decimal(12, 2)
+  precio_venta           Decimal?                 @db.Decimal(12, 2)
+  activo                 Boolean                  @default(true)
+  fecha_creacion         DateTime                 @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion    DateTime                 @default(now()) @db.Timestamptz(6)
+  movimientos_inventario movimientos_inventario[]
+  categorias_producto    categorias_producto?     @relation(fields: [id_clinica, id_categoria], references: [id_clinica, id_categoria], onDelete: NoAction, onUpdate: NoAction, map: "fk_productos_categoria")
+  clinicas               clinicas                 @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_productos_clinica")
+
+  @@unique([id_clinica, codigo], map: "uq_productos_clinica_codigo")
+  @@unique([id_clinica, id_producto], map: "uq_productos_clinica_producto")
+  @@index([id_clinica, nombre], map: "ix_productos_clinica_nombre")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model receta_detalle {
+  id_receta_detalle  BigInt  @id @default(autoincrement())
+  id_receta          BigInt
+  medicamento        String  @db.VarChar(200)
+  presentacion       String? @db.VarChar(150)
+  dosis              String  @db.VarChar(150)
+  frecuencia         String? @db.VarChar(150)
+  duracion_dias      Int?    @db.SmallInt
+  via_administracion String? @db.VarChar(100)
+  indicaciones       String?
+  recetas            recetas @relation(fields: [id_receta], references: [id_receta], onDelete: Cascade, onUpdate: NoAction, map: "fk_receta_detalle_receta")
+}
+
+model recetas {
+  id_receta              BigInt           @id @default(autoincrement())
+  id_clinica             BigInt
+  id_consulta            BigInt
+  id_paciente            BigInt
+  id_odontologo          BigInt
+  fecha                  DateTime         @default(now()) @db.Timestamptz(6)
+  indicaciones_generales String?
+  proxima_cita           DateTime?        @db.Timestamptz(6)
+  receta_detalle         receta_detalle[]
+  consultas              consultas        @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_recetas_consulta")
+  usuarios               usuarios         @relation(fields: [id_clinica, id_odontologo], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_recetas_odontologo")
+  pacientes              pacientes        @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_recetas_paciente")
+
+  @@unique([id_clinica, id_receta], map: "uq_recetas_clinica_receta")
+  @@index([id_paciente, fecha(sort: Desc)], map: "ix_recetas_paciente_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model registros_tratamiento {
+  id_registro_tratamiento  BigInt                    @id @default(autoincrement())
+  id_clinica               BigInt
+  id_consulta              BigInt
+  id_plan_detalle          BigInt?
+  id_tratamiento           BigInt
+  id_diente                Int?                      @db.SmallInt
+  id_realizado_por         BigInt
+  fecha                    DateTime                  @default(now()) @db.Timestamptz(6)
+  descripcion              String?
+  valor                    Decimal                   @default(0) @db.Decimal(12, 2)
+  observaciones            String?
+  consultas                consultas                 @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_rt_consulta")
+  dientes                  dientes?                  @relation(fields: [id_diente], references: [id_diente], onDelete: NoAction, onUpdate: NoAction, map: "fk_rt_diente")
+  plan_tratamiento_detalle plan_tratamiento_detalle? @relation(fields: [id_clinica, id_plan_detalle], references: [id_clinica, id_plan_detalle], onDelete: NoAction, onUpdate: NoAction, map: "fk_rt_plan_detalle")
+  tratamientos             tratamientos              @relation(fields: [id_clinica, id_tratamiento], references: [id_clinica, id_tratamiento], onDelete: NoAction, onUpdate: NoAction, map: "fk_rt_tratamiento")
+  usuarios                 usuarios                  @relation(fields: [id_clinica, id_realizado_por], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_rt_usuario")
+
+  @@index([id_consulta, fecha(sort: Desc)], map: "ix_registros_tratamiento_consulta")
+}
+
+model roles {
+  id_rol        Int             @id @default(autoincrement())
+  codigo        String          @unique @db.VarChar(40)
+  nombre        String          @db.VarChar(80)
+  descripcion   String?
+  activo        Boolean         @default(true)
+  usuario_roles usuario_roles[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model signos_vitales {
+  id_signo_vital          BigInt     @id @default(autoincrement())
+  id_clinica              BigInt
+  id_paciente             BigInt
+  id_consulta             BigInt?
+  id_registrado_por       BigInt?
+  presion_sistolica       Int?       @db.SmallInt
+  presion_diastolica      Int?       @db.SmallInt
+  frecuencia_cardiaca     Int?       @db.SmallInt
+  frecuencia_respiratoria Int?       @db.SmallInt
+  temperatura_c           Decimal?   @db.Decimal(4, 1)
+  pulso                   Int?       @db.SmallInt
+  cp                      String?    @db.VarChar(50)
+  fecha_toma              DateTime   @default(now()) @db.Timestamptz(6)
+  observaciones           String?
+  consultas               consultas? @relation(fields: [id_clinica, id_consulta], references: [id_clinica, id_consulta], onDelete: NoAction, onUpdate: NoAction, map: "fk_sv_consulta")
+  pacientes               pacientes  @relation(fields: [id_clinica, id_paciente], references: [id_clinica, id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_sv_paciente")
+  usuarios                usuarios?  @relation(fields: [id_clinica, id_registrado_por], references: [id_clinica, id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_sv_usuario")
+
+  @@index([id_paciente, fecha_toma(sort: Desc)], map: "ix_signos_vitales_paciente_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tratamientos {
+  id_tratamiento           BigInt                     @id @default(autoincrement())
+  id_clinica               BigInt
+  codigo                   String?                    @db.VarChar(40)
+  nombre                   String                     @db.VarChar(150)
+  descripcion              String?
+  precio_base              Decimal                    @default(0) @db.Decimal(12, 2)
+  activo                   Boolean                    @default(true)
+  fecha_creacion           DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion      DateTime                   @default(now()) @db.Timestamptz(6)
+  plan_tratamiento_detalle plan_tratamiento_detalle[]
+  registros_tratamiento    registros_tratamiento[]
+  clinicas                 clinicas                   @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_tratamientos_clinica")
+
+  @@unique([id_clinica, codigo], map: "uq_tratamientos_clinica_codigo")
+  @@unique([id_clinica, id_tratamiento], map: "uq_tratamientos_clinica_tratamiento")
+  @@index([id_clinica, nombre], map: "ix_tratamientos_clinica_nombre")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuario_proveedores_auth {
+  id_proveedor_auth BigInt   @id @default(autoincrement())
+  id_clinica        BigInt
+  id_usuario        BigInt
+  proveedor         String   @db.VarChar(30)
+  proveedor_subject String   @db.VarChar(255)
+  correo_proveedor  String?  @db.VarChar(150)
+  fecha_vinculacion DateTime @default(now()) @db.Timestamptz(6)
+  usuarios          usuarios @relation(fields: [id_clinica, id_usuario], references: [id_clinica, id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_auth_usuario")
+
+  @@unique([id_clinica, proveedor, proveedor_subject], map: "uq_auth_proveedor_subject")
+  @@unique([id_usuario, proveedor], map: "uq_auth_usuario_proveedor")
+}
+
+model usuario_roles {
+  id_usuario       BigInt
+  id_rol           Int
+  fecha_asignacion DateTime @default(now()) @db.Timestamptz(6)
+  roles            roles    @relation(fields: [id_rol], references: [id_rol], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_roles_rol")
+  usuarios         usuarios @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_roles_usuario")
+
+  @@id([id_usuario, id_rol])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model usuarios {
+  id_usuario                                     BigInt                     @id @default(autoincrement())
+  id_clinica                                     BigInt
+  nombres                                        String                     @db.VarChar(100)
+  apellidos                                      String                     @db.VarChar(100)
+  correo                                         String?                    @db.VarChar(150)
+  contrasena_hash                                String?                    @db.VarChar(255)
+  telefono                                       String?                    @db.VarChar(30)
+  estado                                         String                     @default("ACTIVO") @db.VarChar(20)
+  ultimo_acceso                                  DateTime?                  @db.Timestamptz(6)
+  fecha_creacion                                 DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion                            DateTime                   @default(now()) @db.Timestamptz(6)
+  fecha_eliminacion                              DateTime?                  @db.Timestamptz(6)
+  auditoria                                      auditoria[]
+  citas_citas_id_clinica_id_creado_porTousuarios citas[]                    @relation("citas_id_clinica_id_creado_porTousuarios")
+  citas_citas_id_clinica_id_odontologoTousuarios citas[]                    @relation("citas_id_clinica_id_odontologoTousuarios")
+  consentimientos_paciente                       consentimientos_paciente[]
+  consultas                                      consultas[]
+  documentos                                     documentos[]
+  movimientos_inventario                         movimientos_inventario[]
+  odontogramas                                   odontogramas[]
+  paciente_cuentas_usuario                       paciente_cuentas_usuario?
+  pagos                                          pagos[]
+  planes_tratamiento                             planes_tratamiento[]
+  recetas                                        recetas[]
+  registros_tratamiento                          registros_tratamiento[]
+  signos_vitales                                 signos_vitales[]
+  usuario_proveedores_auth                       usuario_proveedores_auth[]
+  usuario_roles                                  usuario_roles[]
+  clinicas                                       clinicas                   @relation(fields: [id_clinica], references: [id_clinica], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuarios_clinica")
+
+  @@unique([id_clinica, id_usuario], map: "uq_usuarios_clinica_usuario")
+  @@index([id_clinica], map: "ix_usuarios_clinica")
+}
