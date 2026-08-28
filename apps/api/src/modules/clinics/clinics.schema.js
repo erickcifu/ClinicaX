@@ -17,31 +17,40 @@ export const createClinicSchema = z.object({
   nit: z
     .string()
     .trim()
-    .max(30, "El NIT no puede superar 30 caracteres")
-    .optional()
-    .nullable(),
+    .regex(
+      /^\d{1,12}-[\dKk]$/,
+      "El NIT debe tener un formato válido, por ejemplo 1234567-8"
+    )
+    .max(30)
+    .nullable()
+    .optional(),
 
   direccion: z
     .string()
     .trim()
-    .max(500, "La dirección es demasiado larga")
-    .optional()
-    .nullable(),
+    .max(500)
+    .nullable()
+    .optional(),
 
   telefono: z
     .string()
     .trim()
-    .max(30, "El teléfono no puede superar 30 caracteres")
-    .optional()
-    .nullable(),
+    .regex(
+      /^\+?[0-9\s()-]{8,12}$/,
+      "El teléfono solo puede contener números, espacios, +, - y paréntesis"
+    )
+    .max(30)
+    .nullable()
+    .optional(),
+    
 
   correo: z
     .string()
     .trim()
     .email("El correo electrónico no es válido")
     .max(150)
-    .optional()
-    .nullable(),
+    .nullable()
+    .optional(),
 
   logo_url: z
     .string()
@@ -72,6 +81,10 @@ export const updateClinicSchema = z
     nit: z
       .string()
       .trim()
+      .regex(
+        /^\d{1,12}-[\dKk]$/,
+        "El NIT debe tener un formato válido, por ejemplo 1234567-8"
+      )
       .max(30)
       .nullable()
       .optional(),
@@ -86,9 +99,14 @@ export const updateClinicSchema = z
     telefono: z
       .string()
       .trim()
+      .regex(
+        /^\+?[0-9\s()-]{8,12}$/,
+        "El teléfono solo puede contener números, espacios, +, - y paréntesis"
+      )
       .max(30)
       .nullable()
       .optional(),
+      
 
     correo: z
       .string()

@@ -6,7 +6,8 @@ export async function getDatabaseInfo() {
       current_database() AS database,
       current_schema() AS schema,
       current_user AS user,
-      current_setting('server_version') AS version
+      current_setting('server_version') AS version,
+      current_setting('TimeZone') AS timezone
   `;
 
   return result[0];

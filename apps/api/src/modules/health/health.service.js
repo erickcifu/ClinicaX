@@ -22,6 +22,7 @@ export async function getDatabaseHealth() {
       schema: databaseInfo.schema,
       user: databaseInfo.user,
       version: databaseInfo.version,
+      timezone: databaseInfo.timezone,
     },
 
     timestamp: new Date().toISOString(),
