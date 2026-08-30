@@ -4,6 +4,9 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import clinicsRoutes from "./modules/clinics/clinics.routes.js";
 import healthRoutes from "./modules/health/health.routes.js";
+import rolesRoutes from "./modules/roles/roles.routes.js";
+import usersRoutes from "./modules/users/users.routes.js";
+import authRoutes from "./modules/auth/auth.routes.js";
 
 import { notFoundMiddleware } from "./middlewares/not-found.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -41,6 +44,10 @@ app.use(
 
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/clinics", clinicsRoutes);
+app.use("/api/v1/roles", rolesRoutes);
+app.use("/api/v1/users", usersRoutes);
+app.use("/api/v1/auth",authRoutes);
+
 // ===============================
 // Ruta no encontrada
 // ===============================

@@ -9,14 +9,26 @@ import {
   Typography,
 } from "@mui/material";
 
-import EditIcon from "@mui/icons-material/Edit";
-import SyncAltIcon from "@mui/icons-material/SyncAlt";
+import EditIcon
+  from "@mui/icons-material/Edit";
+
+import SyncAltIcon
+  from "@mui/icons-material/SyncAlt";
+
+import SettingsIcon
+  from "@mui/icons-material/Settings";
+
+import {
+  useNavigate,
+} from "react-router-dom";
 
 export default function ClinicCard({
   clinic,
   onEdit,
   onChangeStatus,
 }) {
+  const navigate = useNavigate();
+
   const statusColor = {
     ACTIVA: "success",
     INACTIVA: "default",
@@ -49,8 +61,9 @@ export default function ClinicCard({
           <Chip
             label={clinic.estado}
             color={
-              statusColor[clinic.estado] ||
-              "default"
+              statusColor[
+                clinic.estado
+              ] || "default"
             }
             size="small"
           />
@@ -61,17 +74,24 @@ export default function ClinicCard({
         <Stack spacing={0.8}>
           <Typography variant="body2">
             <strong>NIT:</strong>{" "}
-            {clinic.nit || "No registrado"}
+            {clinic.nit ||
+              "No registrado"}
           </Typography>
 
           <Typography variant="body2">
-            <strong>Teléfono:</strong>{" "}
-            {clinic.telefono || "No registrado"}
+            <strong>
+              Teléfono:
+            </strong>{" "}
+            {clinic.telefono ||
+              "No registrado"}
           </Typography>
 
           <Typography variant="body2">
-            <strong>Correo:</strong>{" "}
-            {clinic.correo || "No registrado"}
+            <strong>
+              Correo:
+            </strong>{" "}
+            {clinic.correo ||
+              "No registrado"}
           </Typography>
         </Stack>
       </CardContent>
@@ -82,13 +102,16 @@ export default function ClinicCard({
         sx={{
           px: 2,
           py: 1.5,
+          flexWrap: "wrap",
           justifyContent: "flex-end",
         }}
       >
         <Button
           size="small"
           startIcon={<EditIcon />}
-          onClick={() => onEdit(clinic)}
+          onClick={() =>
+            onEdit(clinic)
+          }
         >
           Editar
         </Button>
@@ -101,6 +124,18 @@ export default function ClinicCard({
           }
         >
           Estado
+        </Button>
+
+        <Button
+          size="small"
+          startIcon={<SettingsIcon />}
+          onClick={() =>
+            navigate(
+              `/clinics/${clinic.id_clinica}/settings`
+            )
+          }
+        >
+          Configuración
         </Button>
       </CardActions>
     </Card>

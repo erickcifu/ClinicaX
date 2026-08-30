@@ -7,7 +7,10 @@ export async function getClinics() {
 }
 
 export async function createClinic(data) {
-  const response = await http.post("/api/v1/clinics", data);
+  const response = await http.post(
+    "/api/v1/clinics",
+    data
+  );
 
   return response.data.data;
 }
@@ -27,6 +30,23 @@ export async function updateClinicStatus(id, estado) {
     {
       estado,
     }
+  );
+
+  return response.data.data;
+}
+
+export async function getClinicSettings(id) {
+  const response = await http.get(
+    `/api/v1/clinics/${id}/settings`
+  );
+
+  return response.data.data;
+}
+
+export async function updateClinicSettings(id, data) {
+  const response = await http.patch(
+    `/api/v1/clinics/${id}/settings`,
+    data
   );
 
   return response.data.data;
