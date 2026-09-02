@@ -2,19 +2,55 @@ import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 
 import {
-  findUserForLogin,
+  findUsersForLogin,
   updateUserLastAccess,
 } from "./auth.repository.js";
 
+import {
+  SUPERADMIN_ROLE_CODE,
+} from "../roles/roles.constants.js";
+
 function createInvalidCredentialsError() {
   const error = new Error(
-    "Correo, contraseña o clínica incorrectos"
+    "Correo o contraseña incorrectos"
   );
 
   error.statusCode = 401;
   error.code = "INVALID_CREDENTIALS";
 
   return error;
+}
+
+function createAmbiguousLoginError() {
+  const error = new Error(
+    "Estas credenciales están asociadas a más de una clínica. Contacte al administrador"
+  );
+
+  error.statusCode = 409;
+  error.code =
+    "AMBIGUOUS_LOGIN_CLINIC";
+
+  return error;
+}
+
+function getActiveUserRoles(user) {
+  return user.usuario_roles.filter(
+    (userRole) =>
+      userRole.roles.activo
+  );
+}
+
+function hasActiveRole(
+  user,
+  roleCode
+) {
+  return getActiveUserRoles(
+    user
+  ).some(
+    (userRole) =>
+      userRole.roles.codigo ===
+      roleCode
+  );
 }
 
 function formatAuthUser(user) {
@@ -40,7 +76,7 @@ function formatAuthUser(user) {
     },
 
     roles:
-      user.usuario_roles.map(
+      getActiveUserRoles(user).map(
         (userRole) => ({
           id_rol:
             userRole.roles.id_rol,
@@ -62,32 +98,69 @@ export async function login(data) {
     );
   }
 
-  const user =
-    await findUserForLogin(
-      data.id_clinica,
+  const candidates =
+    await findUsersForLogin(
       data.correo
     );
 
-  if (
-    !user ||
-    !user.contrasena_hash
-  ) {
+  if (candidates.length === 0) {
     throw createInvalidCredentialsError();
   }
 
-  const passwordIsValid =
-    await argon2.verify(
-      user.contrasena_hash,
-      data.contrasena
+  const passwordMatches = (
+    await Promise.all(
+      candidates.map(async (candidate) => {
+        if (!candidate.contrasena_hash) {
+          return null;
+        }
+
+        const passwordIsValid =
+          await argon2.verify(
+            candidate.contrasena_hash,
+            data.contrasena
+          );
+
+        return passwordIsValid
+          ? candidate
+          : null;
+      })
+    )
+  ).filter(Boolean);
+
+  if (passwordMatches.length === 0) {
+    throw createInvalidCredentialsError();
+  }
+
+  const activeMatches =
+    passwordMatches.filter(
+      (candidate) =>
+        candidate.estado ===
+          "ACTIVO" &&
+        (
+          candidate.clinicas.estado ===
+            "ACTIVA" ||
+          hasActiveRole(
+            candidate,
+            SUPERADMIN_ROLE_CODE
+          )
+        )
     );
 
-  if (!passwordIsValid) {
-    throw createInvalidCredentialsError();
+  if (activeMatches.length > 1) {
+    throw createAmbiguousLoginError();
   }
+
+  const user =
+    activeMatches[0] ||
+    passwordMatches[0];
 
   if (
     user.clinicas.estado !==
-    "ACTIVA"
+      "ACTIVA" &&
+    !hasActiveRole(
+      user,
+      SUPERADMIN_ROLE_CODE
+    )
   ) {
     const error = new Error(
       "La clínica no está activa"
@@ -115,7 +188,7 @@ export async function login(data) {
   }
 
   const roleCodes =
-    user.usuario_roles.map(
+    getActiveUserRoles(user).map(
       (userRole) =>
         userRole.roles.codigo
     );

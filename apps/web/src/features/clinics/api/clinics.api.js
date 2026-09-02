@@ -51,3 +51,20 @@ export async function updateClinicSettings(id, data) {
 
   return response.data.data;
 }
+
+export async function getMyClinicSettings() {
+  const response = await http.get(
+    "/api/v1/my-clinic/settings"
+  );
+
+  return response.data.data;
+}
+
+export async function updateMyClinicSettings(data) {
+  const response = await http.patch(
+    "/api/v1/my-clinic/settings",
+    data
+  );
+
+  return response.data.data;
+}

@@ -2,6 +2,10 @@ import jwt from "jsonwebtoken";
 
 import { prisma } from "../database/prisma.js";
 
+import {
+  SUPERADMIN_ROLE_CODE,
+} from "../modules/roles/roles.constants.js";
+
 export async function authenticateToken(
   req,
   res,
@@ -126,35 +130,7 @@ export async function authenticateToken(
         "AUTH_USER_NOT_FOUND";
 
       throw error;
-    }
-
-    if (user.estado !== "ACTIVO") {
-      const error = new Error(
-        "El usuario no está activo"
-      );
-
-      error.statusCode = 403;
-      error.code =
-        "USER_NOT_ACTIVE";
-
-      throw error;
-    }
-
-    if (
-      user.clinicas.estado !==
-      "ACTIVA"
-    ) {
-      const error = new Error(
-        "La clínica no está activa"
-      );
-
-      error.statusCode = 403;
-      error.code =
-        "CLINIC_NOT_ACTIVE";
-
-      throw error;
-    }
-
+    };
     const activeRoles =
       user.usuario_roles
         .filter(
@@ -174,6 +150,40 @@ export async function authenticateToken(
           })
         );
 
+    const isSuperadmin =
+      activeRoles.some(
+        (role) =>
+          role.codigo ===
+          SUPERADMIN_ROLE_CODE
+      );
+
+    if (user.estado !== "ACTIVO") {
+      const error = new Error(
+        "El usuario no está activo"
+      );
+
+      error.statusCode = 403;
+      error.code =
+        "USER_NOT_ACTIVE";
+
+      throw error;
+    }
+
+    if (
+      user.clinicas.estado !==
+        "ACTIVA" &&
+      !isSuperadmin
+    ) {
+      const error = new Error(
+        "La clínica no está activa"
+      );
+
+      error.statusCode = 403;
+      error.code =
+        "CLINIC_NOT_ACTIVE";
+
+      throw error;
+    };
     req.auth = {
       userId:
         user.id_usuario.toString(),

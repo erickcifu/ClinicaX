@@ -3,10 +3,12 @@ import helmet from "helmet";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import clinicsRoutes from "./modules/clinics/clinics.routes.js";
+import myClinicRoutes from "./modules/clinics/my-clinic.routes.js";
 import healthRoutes from "./modules/health/health.routes.js";
 import rolesRoutes from "./modules/roles/roles.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
+import patientsRoutes from "./modules/patients/patients.routes.js";
 
 import { notFoundMiddleware } from "./middlewares/not-found.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -44,9 +46,11 @@ app.use(
 
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/clinics", clinicsRoutes);
+app.use("/api/v1/my-clinic", myClinicRoutes);
 app.use("/api/v1/roles", rolesRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/auth",authRoutes);
+app.use("/api/v1/patients", patientsRoutes);
 
 // ===============================
 // Ruta no encontrada

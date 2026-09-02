@@ -45,7 +45,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
   getClinicSettings,
+  getMyClinicSettings,
   updateClinicSettings,
+  updateMyClinicSettings,
 } from "../api/clinics.api.js";
 
 import {
@@ -56,7 +58,9 @@ import {
   defaultBranding,
 } from "../../../theme/branding.js";
 
-export default function ClinicSettingsPage() {
+export default function ClinicSettingsPage({
+  isOwnClinic = false,
+}) {
   const { id } = useParams();
 
   const navigate = useNavigate();
@@ -76,6 +80,24 @@ export default function ClinicSettingsPage() {
 
       mode: "light",
     });
+
+  const settingsScope =
+    isOwnClinic ? "mine" : id;
+
+  function loadSettings() {
+    return isOwnClinic
+      ? getMyClinicSettings()
+      : getClinicSettings(id);
+  }
+
+  function saveSettings(data) {
+    return isOwnClinic
+      ? updateMyClinicSettings(data)
+      : updateClinicSettings(
+          id,
+          data
+        );
+  }
 
   const {
     register,
@@ -108,13 +130,13 @@ export default function ClinicSettingsPage() {
   } = useQuery({
     queryKey: [
       "clinic-settings",
-      id,
+      settingsScope,
     ],
 
-    queryFn: () =>
-      getClinicSettings(id),
+    queryFn: loadSettings,
 
-    enabled: Boolean(id),
+    enabled:
+      isOwnClinic || Boolean(id),
   });
 
   useEffect(() => {
@@ -167,17 +189,14 @@ export default function ClinicSettingsPage() {
   const agendaMutation =
     useMutation({
       mutationFn: (formData) =>
-        updateClinicSettings(
-          id,
-          formData
-        ),
+        saveSettings(formData),
 
       onSuccess: async () => {
         await queryClient
           .invalidateQueries({
             queryKey: [
               "clinic-settings",
-              id,
+              settingsScope,
             ],
           });
       },
@@ -198,9 +217,7 @@ export default function ClinicSettingsPage() {
             ? currentExtra
             : {};
 
-        return updateClinicSettings(
-          id,
-          {
+        return saveSettings({
             configuracion_extra: {
               ...extra,
 
@@ -215,8 +232,7 @@ export default function ClinicSettingsPage() {
                   branding.mode,
               },
             },
-          }
-        );
+          });
       },
 
       onSuccess: async () => {
@@ -224,7 +240,7 @@ export default function ClinicSettingsPage() {
           .invalidateQueries({
             queryKey: [
               "clinic-settings",
-              id,
+              settingsScope,
             ],
           });
       },
@@ -272,11 +288,17 @@ export default function ClinicSettingsPage() {
           <ArrowBackIcon />
         }
         onClick={() =>
-          navigate("/clinics")
+          navigate(
+            isOwnClinic
+              ? "/"
+              : "/clinics"
+          )
         }
         sx={{ mb: 2 }}
       >
-        Volver a clínicas
+        {isOwnClinic
+          ? "Volver al Dashboard"
+          : "Volver a clínicas"}
       </Button>
 
       <Stack

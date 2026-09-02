@@ -13,7 +13,20 @@ import {
   updateClinicSettingsController,
 } from "./settings/clinic-settings.controller.js";
 
+import {
+  authenticateToken,
+} from "../../middlewares/auth.middleware.js";
+
+import {
+  authorizeRoles,
+} from "../../middlewares/authorization.middleware.js";
+
 const router = Router();
+
+router.use(
+  authenticateToken,
+  authorizeRoles("SUPERADMIN")
+);
 
 router.get("/", listClinicsController);
 

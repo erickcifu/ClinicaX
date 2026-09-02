@@ -1,16 +1,17 @@
 import { Router } from "express";
 
 import {
-  listRolesController,
-} from "./roles.controller.js";
-
-import {
   authenticateToken,
 } from "../../middlewares/auth.middleware.js";
 
 import {
   authorizeRoles,
 } from "../../middlewares/authorization.middleware.js";
+
+import {
+  getMyClinicSettingsController,
+  updateMyClinicSettingsController,
+} from "./settings/my-clinic-settings.controller.js";
 
 const router = Router();
 
@@ -20,8 +21,13 @@ router.use(
 );
 
 router.get(
-  "/",
-  listRolesController
+  "/settings",
+  getMyClinicSettingsController
+);
+
+router.patch(
+  "/settings",
+  updateMyClinicSettingsController
 );
 
 export default router;

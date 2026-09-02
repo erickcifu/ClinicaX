@@ -9,6 +9,10 @@ import {
   findUserById,
 } from "./users.repository.js";
 
+import {
+  PLATFORM_ROLE_CODES,
+} from "../roles/roles.constants.js";
+
 function formatUser(user) {
   return {
     id_usuario:
@@ -41,6 +45,25 @@ export async function registerUser(
   data,
   idClinica
 ) {
+  const forbiddenRoles =
+    data.roles.filter((role) =>
+      PLATFORM_ROLE_CODES.includes(
+        role
+      )
+    );
+
+  if (forbiddenRoles.length > 0) {
+    const error = new Error(
+      "Los roles de plataforma no pueden asignarse desde una clínica"
+    );
+
+    error.statusCode = 403;
+    error.code =
+      "ROLE_NOT_ASSIGNABLE";
+
+    throw error;
+  }
+
   const clinic =
     await findClinicForUser(
       idClinica

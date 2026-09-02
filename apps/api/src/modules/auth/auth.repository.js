@@ -1,12 +1,8 @@
 import { prisma } from "../../database/prisma.js";
 
-export async function findUserForLogin(
-  idClinica,
-  correo
-) {
-  return prisma.usuarios.findFirst({
+export async function findUsersForLogin(correo) {
+  return prisma.usuarios.findMany({
     where: {
-      id_clinica: idClinica,
       fecha_eliminacion: null,
 
       correo: {
@@ -29,6 +25,10 @@ export async function findUserForLogin(
           roles: true,
         },
       },
+    },
+
+    orderBy: {
+      id_usuario: "asc",
     },
   });
 }

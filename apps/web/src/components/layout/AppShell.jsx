@@ -3,12 +3,14 @@ import { useState } from "react";
 import {
   AppBar,
   Box,
+  Button,
   Drawer,
   IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Stack,
   Toolbar,
   Typography,
 } from "@mui/material";
@@ -18,6 +20,8 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import BusinessIcon from "@mui/icons-material/Business";
 import PeopleIcon from "@mui/icons-material/People";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import LogoutIcon from "@mui/icons-material/Logout";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 import {
   NavLink,
@@ -25,6 +29,7 @@ import {
 } from "react-router-dom";
 
 import { defaultBranding } from "../../theme/branding.js";
+import { useAuth } from "../../features/auth/context/useAuth.js";
 
 const drawerWidth = 250;
 
@@ -38,6 +43,13 @@ const menuItems = [
     text: "Clínicas",
     icon: <BusinessIcon />,
     path: "/clinics",
+    allowedRoles: ["SUPERADMIN"],
+  },
+  {
+    text: "Configuración",
+    icon: <SettingsIcon />,
+    path: "/settings",
+    allowedRoles: ["ADMIN"],
   },
   {
     text: "Pacientes",
@@ -53,6 +65,33 @@ const menuItems = [
 
 export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { user, logout } = useAuth();
+
+  const userRoleCodes =
+    user?.roles?.map(
+      (role) => role.codigo
+    ) ?? [];
+
+  const visibleMenuItems = menuItems.filter(
+    (item) =>
+      !item.allowedRoles ||
+      item.allowedRoles.some((role) =>
+        userRoleCodes.includes(role)
+      )
+  );
+
+  const fullName = [
+    user?.nombres,
+    user?.apellidos,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const roleNames =
+    user?.roles
+      ?.map((role) => role.nombre)
+      .join(", ") || "Usuario";
 
   const drawer = (
     <Box>
@@ -76,7 +115,7 @@ export default function AppShell() {
       </Toolbar>
 
       <List sx={{ px: 1 }}>
-        {menuItems.map((item) => (
+        {visibleMenuItems.map((item) => (
           <ListItemButton
             key={item.path}
             component={NavLink}
@@ -135,14 +174,79 @@ export default function AppShell() {
 
           <Typography
             variant="h6"
-            sx={{ flexGrow: 1 }}
+            noWrap
+            sx={{
+              flexGrow: 1,
+              minWidth: 0,
+            }}
           >
-            {defaultBranding.clinicName}
+            {user?.clinica?.nombre ||
+              defaultBranding.clinicName}
           </Typography>
 
-          <Typography variant="body2">
-            Administrador
-          </Typography>
+          <Stack
+            spacing={0}
+            sx={{
+              display: {
+                xs: "none",
+                sm: "flex",
+              },
+              textAlign: "right",
+              ml: 2,
+            }}
+          >
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              noWrap
+            >
+              {fullName || user?.correo}
+            </Typography>
+
+            <Typography
+              variant="caption"
+              sx={{ opacity: 0.85 }}
+              noWrap
+            >
+              {roleNames}
+            </Typography>
+          </Stack>
+
+          <Button
+            color="inherit"
+            onClick={logout}
+            startIcon={<LogoutIcon />}
+            aria-label="Cerrar sesión"
+            sx={{
+              ml: 1,
+              minWidth: {
+                xs: 40,
+                sm: "auto",
+              },
+              px: {
+                xs: 1,
+                sm: 2,
+              },
+              "& .MuiButton-startIcon": {
+                mr: {
+                  xs: 0,
+                  sm: 1,
+                },
+              },
+            }}
+          >
+            <Box
+              component="span"
+              sx={{
+                display: {
+                  xs: "none",
+                  sm: "inline",
+                },
+              }}
+            >
+              Cerrar sesión
+            </Box>
+          </Button>
         </Toolbar>
       </AppBar>
 
