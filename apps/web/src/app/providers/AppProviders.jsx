@@ -12,6 +12,7 @@ import {
 
 import { createClinicTheme } from "../../theme/createClinicTheme.js";
 import { defaultBranding } from "../../theme/branding.js";
+import { AuthProvider } from "../../features/auth/context/AuthContext.jsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,7 +34,7 @@ export default function AppProviders({ children }) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
 
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

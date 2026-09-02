@@ -1,0 +1,6 @@
+export const SUPERADMIN_ROLE_CODE =
+  "SUPERADMIN";
+
+export const PLATFORM_ROLE_CODES = [
+  SUPERADMIN_ROLE_CODE,
+];

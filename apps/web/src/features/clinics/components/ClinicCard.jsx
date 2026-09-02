@@ -1,5 +1,7 @@
 import {
+  Button,
   Card,
+  CardActions,
   CardContent,
   Chip,
   Divider,
@@ -7,7 +9,26 @@ import {
   Typography,
 } from "@mui/material";
 
-export default function ClinicCard({ clinic }) {
+import EditIcon
+  from "@mui/icons-material/Edit";
+
+import SyncAltIcon
+  from "@mui/icons-material/SyncAlt";
+
+import SettingsIcon
+  from "@mui/icons-material/Settings";
+
+import {
+  useNavigate,
+} from "react-router-dom";
+
+export default function ClinicCard({
+  clinic,
+  onEdit,
+  onChangeStatus,
+}) {
+  const navigate = useNavigate();
+
   const statusColor = {
     ACTIVA: "success",
     INACTIVA: "default",
@@ -32,13 +53,18 @@ export default function ClinicCard({ clinic }) {
               variant="body2"
               color="text.secondary"
             >
-              {clinic.direccion || "Sin dirección registrada"}
+              {clinic.direccion ||
+                "Sin dirección registrada"}
             </Typography>
           </div>
 
           <Chip
             label={clinic.estado}
-            color={statusColor[clinic.estado] || "default"}
+            color={
+              statusColor[
+                clinic.estado
+              ] || "default"
+            }
             size="small"
           />
         </Stack>
@@ -48,20 +74,70 @@ export default function ClinicCard({ clinic }) {
         <Stack spacing={0.8}>
           <Typography variant="body2">
             <strong>NIT:</strong>{" "}
-            {clinic.nit || "No registrado"}
+            {clinic.nit ||
+              "No registrado"}
           </Typography>
 
           <Typography variant="body2">
-            <strong>Teléfono:</strong>{" "}
-            {clinic.telefono || "No registrado"}
+            <strong>
+              Teléfono:
+            </strong>{" "}
+            {clinic.telefono ||
+              "No registrado"}
           </Typography>
 
           <Typography variant="body2">
-            <strong>Correo:</strong>{" "}
-            {clinic.correo || "No registrado"}
+            <strong>
+              Correo:
+            </strong>{" "}
+            {clinic.correo ||
+              "No registrado"}
           </Typography>
         </Stack>
       </CardContent>
+
+      <Divider />
+
+      <CardActions
+        sx={{
+          px: 2,
+          py: 1.5,
+          flexWrap: "wrap",
+          justifyContent: "flex-end",
+        }}
+      >
+        <Button
+          size="small"
+          startIcon={<EditIcon />}
+          onClick={() =>
+            onEdit(clinic)
+          }
+        >
+          Editar
+        </Button>
+
+        <Button
+          size="small"
+          startIcon={<SyncAltIcon />}
+          onClick={() =>
+            onChangeStatus(clinic)
+          }
+        >
+          Estado
+        </Button>
+
+        <Button
+          size="small"
+          startIcon={<SettingsIcon />}
+          onClick={() =>
+            navigate(
+              `/clinics/${clinic.id_clinica}/settings`
+            )
+          }
+        >
+          Configuración
+        </Button>
+      </CardActions>
     </Card>
   );
 }
