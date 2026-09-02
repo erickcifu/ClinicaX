@@ -24,9 +24,9 @@ Sistema de gestión odontológica multi-clínica.
 - [x] Base de datos
 - [x] Health API
 - [x] Clínicas
-- [ ] Autenticación
-- [ ] Usuarios
-- [ ] Pacientes
+- [x] Autenticación
+- [x] Usuarios
+- [x] Pacientes
 - [ ] Agenda
 - [ ] Expedientes
 - [ ] Odontograma
