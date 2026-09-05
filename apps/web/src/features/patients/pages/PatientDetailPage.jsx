@@ -40,6 +40,9 @@ import MedicalHistoryPanel
 import DentalHistoryPanel
   from "../components/DentalHistoryPanel.jsx";  
 
+import ConsultationsPanel
+  from "../components/ConsultationsPanel.jsx";
+
 import {
   useAuth,
 } from "../../auth/context/useAuth.js";
@@ -74,7 +77,6 @@ function formatDate(value) {
   ).format(date);
 }
 
-
 /*
  * Convierte:
  * MASCULINO
@@ -92,7 +94,6 @@ function formatSex(value) {
     value.slice(1).toLowerCase()
   );
 }
-
 
 /*
  * Componente reutilizable para mostrar:
@@ -199,6 +200,10 @@ export default function PatientDetailPage() {
       (role) => role.codigo
     ) || [];
 
+    const canCreateConsultation =
+      roleCodes.includes(
+        "ODONTOLOGO"
+      );
 
   /*
    * Por ahora pueden modificar
@@ -290,7 +295,6 @@ export default function PatientDetailPage() {
       </Stack>
     );
   }
-
 
   return (
     <Stack spacing={2.5}>
@@ -766,10 +770,17 @@ export default function PatientDetailPage() {
 
 
       {activeTab === 3 && (
-        <Alert severity="info">
-          El módulo de Consultas
-          se encuentra en construcción.
-        </Alert>
+        <ConsultationsPanel
+          patientId={id}
+
+          patientName={
+            `${patient.nombres} ${patient.apellidos}`
+          }
+
+          canCreate={
+            canCreateConsultation
+          }
+        />
       )}
 
 
