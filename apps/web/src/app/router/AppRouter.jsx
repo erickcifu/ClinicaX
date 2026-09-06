@@ -13,6 +13,8 @@ import ClinicSettingsPage from "../../features/clinics/pages/ClinicSettingsPage.
 import LoginPage from "../../features/auth/pages/LoginPage.jsx";
 import PatientsPage from "../../features/patients/pages/PatientsPage.jsx";
 import PatientDetailPage from "../../features/patients/pages/PatientDetailPage.jsx";
+import AppointmentsPage from "../../features/appointments/pages/AppointmentsPage.jsx";
+
 
 const router = createBrowserRouter([
   {
@@ -22,6 +24,7 @@ const router = createBrowserRouter([
 
   {
     path: "/",
+
     element: (
       <ProtectedRoute>
         <AppShell />
@@ -36,15 +39,26 @@ const router = createBrowserRouter([
 
       {
         path: "clinics",
+
         element: (
-          <RoleRoute allowedRoles={["SUPERADMIN"]}>
+          <RoleRoute
+            allowedRoles={[
+              "SUPERADMIN",
+            ]}
+          >
             <ClinicsPage />
           </RoleRoute>
         ),
       },
 
+      /*
+       * =================================================
+       * PACIENTES
+       * =================================================
+       */
       {
         path: "patients",
+
         element: (
           <RoleRoute
             allowedRoles={[
@@ -58,8 +72,10 @@ const router = createBrowserRouter([
           </RoleRoute>
         ),
       },
+
       {
-      path: "patients/:id",
+        path: "patients/:id",
+
         element: (
           <RoleRoute
             allowedRoles={[
@@ -74,20 +90,64 @@ const router = createBrowserRouter([
         ),
       },
 
+      /*
+       * =================================================
+       * AGENDA
+       * =================================================
+       */
+      {
+        path: "appointments",
+
+        element: (
+          <RoleRoute
+            allowedRoles={[
+              "ADMIN",
+              "RECEPCION",
+              "ODONTOLOGO",
+              "ASISTENTE",
+            ]}
+          >
+            <AppointmentsPage />
+          </RoleRoute>
+        ),
+      },
+
+      /*
+       * =================================================
+       * CONFIGURACIÓN SUPERADMIN
+       * =================================================
+       */
       {
         path: "clinics/:id/settings",
+
         element: (
-          <RoleRoute allowedRoles={["SUPERADMIN"]}>
+          <RoleRoute
+            allowedRoles={[
+              "SUPERADMIN",
+            ]}
+          >
             <ClinicSettingsPage />
           </RoleRoute>
         ),
       },
 
+      /*
+       * =================================================
+       * CONFIGURACIÓN DE MI CLÍNICA
+       * =================================================
+       */
       {
         path: "settings",
+
         element: (
-          <RoleRoute allowedRoles={["ADMIN"]}>
-            <ClinicSettingsPage isOwnClinic />
+          <RoleRoute
+            allowedRoles={[
+              "ADMIN",
+            ]}
+          >
+            <ClinicSettingsPage
+              isOwnClinic
+            />
           </RoleRoute>
         ),
       },
@@ -95,6 +155,11 @@ const router = createBrowserRouter([
   },
 ]);
 
+
 export default function AppRouter() {
-  return <RouterProvider router={router} />;
+  return (
+    <RouterProvider
+      router={router}
+    />
+  );
 }
