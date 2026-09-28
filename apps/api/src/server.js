@@ -3,10 +3,19 @@ import "dotenv/config";
 import app from "./app.js";
 import { prisma } from "./database/prisma.js";
 
+import {
+  startReminderPlanner,
+  stopReminderPlanner,
+} from "./modules/reminders/reminders.worker.js";
+
 const PORT = Number(process.env.PORT) || 3000;
 
 const server = app.listen(PORT, () => {
-  console.log(`ClinicAX API ejecutándose en http://localhost:${PORT}`);
+  console.log(
+    `ClinicAX API ejecutándose en http://localhost:${PORT}`
+  );
+
+  startReminderPlanner();
 });
 
 async function shutdown(signal) {
@@ -14,6 +23,7 @@ async function shutdown(signal) {
 
   server.close(async () => {
     try {
+      stopReminderPlanner();
       await prisma.$disconnect();
 
       console.log("Conexión con PostgreSQL cerrada correctamente.");

@@ -10,6 +10,8 @@ import usersRoutes from "./modules/users/users.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import patientsRoutes from "./modules/patients/patients.routes.js";
 import appointmentsRoutes from "./modules/appointments/appointments.routes.js";
+import remindersRoutes from "./modules/reminders/reminders.routes.js";
+import whatsAppRoutes from "./modules/whatsapp/whatsapp.routes.js";
 
 import { notFoundMiddleware } from "./middlewares/not-found.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -53,7 +55,8 @@ app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/auth",authRoutes);
 app.use("/api/v1/patients", patientsRoutes);
 app.use("/api/v1/appointments", appointmentsRoutes);
-
+app.use("/api/v1/reminders", remindersRoutes);
+app.use("/api/v1/whatsapp", whatsAppRoutes);
 // ===============================
 // Ruta no encontrada
 // ===============================

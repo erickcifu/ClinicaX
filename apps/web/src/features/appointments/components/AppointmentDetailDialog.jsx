@@ -17,8 +17,6 @@ import {
 } from "@mui/material";
 
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
-
 import {
   useEffect,
   useMemo,
@@ -41,10 +39,6 @@ import {
 import {
   useAuth,
 } from "../../auth/context/useAuth.js";
-
-import {
-  WHATSAPP_CONFIG,
-} from "../config/whatsapp.config.js";
 
 
 /*
@@ -95,159 +89,26 @@ const STATE_TRANSITIONS = {
 
 /*
  * ============================================================
- * TRANSICIONES SEGÚN ROL
+ * PERMISOS DE ESTADO SEGÚN ROL
  * ============================================================
  *
- * RECEPCIÓN:
- * - Confirma citas.
- * - Envía a espera.
- * - Puede cancelar.
- * - Puede marcar no asistió.
+ * El backend actual aplica estas reglas:
  *
- * ODONTÓLOGO:
- * - NO puede poner "En espera".
- * - Su principal flujo es:
+ * - ADMIN / SUPERADMIN / RECEPCION: pueden administrar el
+ *   estado de cualquier cita de su clínica.
+ * - ODONTOLOGO / ASISTENTE: solo pueden cambiar el estado
+ *   de sus propias citas y únicamente envían el campo estado.
+ * - PACIENTE: no puede cambiar estados.
  *
- *      CONFIRMADA
- *          ↓
- *      EN_CONSULTA
- *          ↓
- *      FINALIZADA
- *
- * ADMIN:
- * Tiene control completo de la agenda.
- *
- * SUPERADMIN:
- * También tiene control completo.
- *
- * ASISTENTE:
- * Puede manejar el flujo operativo de llegada,
- * pero no finalizar una consulta.
+ * Las transiciones válidas siguen siendo las definidas en
+ * STATE_TRANSITIONS. El frontend solo filtra las que el usuario
+ * realmente puede solicitar; el backend sigue siendo la autoridad.
  */
-
-const ROLE_TRANSITIONS = {
-  ADMIN: {
-    PROGRAMADA: [
-      "CONFIRMADA",
-      "EN_ESPERA",
-      "EN_CONSULTA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    CONFIRMADA: [
-      "EN_ESPERA",
-      "EN_CONSULTA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    EN_ESPERA: [
-      "EN_CONSULTA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    EN_CONSULTA: [
-      "FINALIZADA",
-    ],
-  },
-
-  SUPERADMIN: {
-    PROGRAMADA: [
-      "CONFIRMADA",
-      "EN_ESPERA",
-      "EN_CONSULTA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    CONFIRMADA: [
-      "EN_ESPERA",
-      "EN_CONSULTA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    EN_ESPERA: [
-      "EN_CONSULTA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    EN_CONSULTA: [
-      "FINALIZADA",
-    ],
-  },
-
-  RECEPCION: {
-    PROGRAMADA: [
-      "CONFIRMADA",
-      "EN_ESPERA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    CONFIRMADA: [
-      "EN_ESPERA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    EN_ESPERA: [
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    EN_CONSULTA: [],
-  },
-
-  ASISTENTE: {
-    PROGRAMADA: [
-      "CONFIRMADA",
-      "EN_ESPERA",
-      "CANCELADA",
-      "NO_ASISTIO",
-    ],
-
-    CONFIRMADA: [
-      "EN_ESPERA",
-      "NO_ASISTIO",
-    ],
-
-    EN_ESPERA: [
-      "NO_ASISTIO",
-    ],
-
-    EN_CONSULTA: [],
-  },
-
-  ODONTOLOGO: {
-    PROGRAMADA: [],
-
-    CONFIRMADA: [
-      "EN_CONSULTA",
-    ],
-
-    EN_ESPERA: [
-      "EN_CONSULTA",
-    ],
-
-    EN_CONSULTA: [
-      "FINALIZADA",
-    ],
-  },
-
-  PACIENTE: {
-    PROGRAMADA: [],
-    CONFIRMADA: [],
-    EN_ESPERA: [],
-    EN_CONSULTA: [],
-    FINALIZADA: [],
-    CANCELADA: [],
-    NO_ASISTIO: [],
-  },
-};
+const STATE_MANAGEMENT_ROLES = [
+  "ADMIN",
+  "SUPERADMIN",
+  "RECEPCION",
+];
 
 
 /*
@@ -354,165 +215,6 @@ function createGoogleCalendarUrl(
 
 /*
  * ============================================================
- * WHATSAPP
- * ============================================================
- */
-
-function getPatientPhone(
-  appointment
-) {
-  const patient =
-    appointment?.paciente;
-
-  if (!patient) {
-    return "";
-  }
-
-  /*
-   * Dependiendo de cómo esté definido el paciente
-   * en la respuesta del backend, intentamos encontrar
-   * el teléfono en los campos habituales.
-   *
-   * Cuando consolidemos el modelo del backend podemos
-   * dejar solamente el campo definitivo.
-   */
-  const phone =
-    patient.telefono ||
-    patient.telefono_celular ||
-    patient.celular ||
-    patient.whatsapp ||
-    "";
-
-  return String(phone)
-    .replace(/\D/g, "");
-}
-
-
-function createWhatsAppMessage(
-  appointment
-) {
-  const patient =
-    appointment?.paciente;
-
-  const patientName =
-    patient
-      ? `${patient.nombres} ${patient.apellidos}`
-      : "Paciente";
-
-  const dentistName =
-    appointment?.odontologo
-      ? `${appointment.odontologo.nombres} ${appointment.odontologo.apellidos}`
-      : "su odontólogo";
-
-  const appointmentDate =
-    appointment?.fecha_hora_inicio
-      ? new Intl.DateTimeFormat(
-          "es-GT",
-          {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-            timeZone:
-              "America/Guatemala",
-          }
-        ).format(
-          new Date(
-            appointment.fecha_hora_inicio
-          )
-        )
-      : "";
-
-  const appointmentTime =
-    appointment?.fecha_hora_inicio
-      ? new Intl.DateTimeFormat(
-          "es-GT",
-          {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-            timeZone:
-              "America/Guatemala",
-          }
-        ).format(
-          new Date(
-            appointment.fecha_hora_inicio
-          )
-        )
-      : "";
-
-  return [
-    `Hola ${patientName}, le escribimos de ClinicAX para confirmar su cita odontológica.`,
-
-    "",
-
-    `📅 Fecha: ${appointmentDate}`,
-
-    `🕐 Hora: ${appointmentTime}`,
-
-    `👨‍⚕️ Odontólogo: ${dentistName}`,
-
-    appointment?.motivo
-      ? `🦷 Motivo: ${appointment.motivo}`
-      : null,
-
-    "",
-
-    "Por favor responda este mensaje indicando:",
-
-    "CONFIRMO",
-
-    "si podrá asistir a su cita.",
-
-    "",
-
-    "Si necesita reprogramarla o tiene alguna duda, puede responder directamente a este mensaje.",
-
-    "",
-
-    "Gracias por confiar en nosotros.",
-  ]
-    .filter(
-      (line) =>
-        line !== null
-    )
-    .join("\n");
-}
-
-
-function createWhatsAppUrl(
-  appointment
-) {
-  const patientPhone =
-    getPatientPhone(
-      appointment
-    );
-
-  /*
-   * Si el paciente tiene teléfono,
-   * abrimos la conversación directamente.
-   *
-   * Si no tiene teléfono, utilizamos
-   * el número temporal configurado.
-   */
-  const phone =
-    patientPhone ||
-    WHATSAPP_CONFIG.TEST_NUMBER;
-
-  const message =
-    createWhatsAppMessage(
-      appointment
-    );
-
-  return (
-    `https://wa.me/${phone}?text=${encodeURIComponent(
-      message
-    )}`
-  );
-}
-
-
-/*
- * ============================================================
  * ROLES
  * ============================================================
  */
@@ -526,23 +228,29 @@ function getUserRoles(user) {
     return user.roles
       .map((role) => {
         if (typeof role === "string") {
-          return role;
+          return role.trim().toUpperCase();
         }
 
-        return (
+        return String(
           role?.codigo ||
           role?.code ||
           role?.rol ||
           role?.name ||
           role?.nombre ||
           ""
-        );
+        )
+          .trim()
+          .toUpperCase();
       })
       .filter(Boolean);
   }
 
   if (user.role) {
-    return [user.role];
+    return [
+      String(user.role)
+        .trim()
+        .toUpperCase(),
+    ];
   }
 
   return [];
@@ -624,61 +332,49 @@ export default function AppointmentDetailDialog({
         const currentState =
           appointment.estado;
 
-        /*
-         * SUPERADMIN y ADMIN
-         * tienen prioridad si están presentes.
-         */
-        const privilegedRole =
-          userRoles.find(
-            (role) =>
-              role === "SUPERADMIN" ||
-              role === "ADMIN"
+        const hasStateManagementRole =
+          userRoles.some((role) =>
+            STATE_MANAGEMENT_ROLES.includes(role)
           );
 
-        if (privilegedRole) {
+        const isOwnAppointment =
+          String(appointment.id_odontologo || "") ===
+          String(user?.id_usuario || user?.id || "");
+
+        /*
+         * Los roles administrativos pueden administrar
+         * cualquier cita de la clínica.
+         */
+        if (hasStateManagementRole) {
           return [
             currentState,
-
-            ...(
-              ROLE_TRANSITIONS[
-                privilegedRole
-              ]?.[
-                currentState
-              ] ||
-              STATE_TRANSITIONS[
-                currentState
-              ] ||
-              []
-            ),
+            ...(STATE_TRANSITIONS[currentState] || []),
           ];
         }
 
         /*
-         * Para el resto buscamos
-         * la primera transición disponible.
+         * Los roles clínicos no administrativos solo pueden
+         * operar sus propias citas.
          */
-        const roleTransitions =
-          userRoles
-            .map(
-              (role) =>
-                ROLE_TRANSITIONS[
-                  role
-                ]?.[
-                  currentState
-                ] || []
-            )
-            .find(
-              (transitions) =>
-                transitions.length > 0
-            ) || [];
+        const canOperateOwnAppointment =
+          userRoles.includes("ODONTOLOGO") ||
+          userRoles.includes("ASISTENTE");
 
-        return [
-          currentState,
-          ...roleTransitions,
-        ];
+        if (
+          canOperateOwnAppointment &&
+          isOwnAppointment
+        ) {
+          return [
+            currentState,
+            ...(STATE_TRANSITIONS[currentState] || []),
+          ];
+        }
+
+        return [currentState];
       },
       [
         appointment,
+        user,
         userRoles,
       ]
     );
@@ -758,10 +454,6 @@ export default function AppointmentDetailDialog({
     appointment.estado;
 
 
-  const patientPhone =
-    getPatientPhone(
-      appointment
-    );
 
 
   return (
@@ -1076,7 +768,7 @@ export default function AppointmentDetailDialog({
 
 
           {/* =================================================
-              WHATSAPP
+              RECORDATORIOS AUTOMÁTICOS
               ================================================= */}
 
           <Box>
@@ -1087,53 +779,19 @@ export default function AppointmentDetailDialog({
                 mb: 1,
               }}
             >
-              Confirmación por WhatsApp
+              Recordatorios automáticos
             </Typography>
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
+            <Alert
+              severity="info"
               sx={{
-                mb: 1.5,
+                alignItems: "flex-start",
               }}
             >
-              Envía al paciente un mensaje preparado
-              con los datos de su cita para que pueda
-              confirmar su asistencia.
-            </Typography>
-
-
-            <Button
-              variant="outlined"
-              startIcon={
-                <WhatsAppIcon />
-              }
-              onClick={() => {
-                window.open(
-                  createWhatsAppUrl(
-                    appointment
-                  ),
-                  "_blank",
-                  "noopener,noreferrer"
-                );
-              }}
-              sx={{
-                textTransform:
-                  "none",
-
-                borderRadius:
-                  2,
-
-                fontWeight:
-                  700,
-              }}
-            >
-              {
-                patientPhone
-                  ? "Enviar confirmación por WhatsApp"
-                  : "Abrir WhatsApp con mensaje preparado"
-              }
-            </Button>
+              Los recordatorios de la cita serán enviados
+              automáticamente por el sistema según la
+              configuración de la clínica.
+            </Alert>
 
           </Box>
 
